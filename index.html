@@ -549,13 +549,200 @@
   .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
 
   @media print {
-    .sidebar, .header, .save-bar, .tab-bar { display: none !important; }
+    .sidebar, .header, .save-bar, .tab-bar, #lockScreen { display: none !important; }
     .shell { display: block; }
     .main { overflow: visible; }
+  }
+
+  /* ── LOCK SCREEN ── */
+  #lockScreen {
+    position: fixed;
+    inset: 0;
+    background: var(--ink);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .lock-card {
+    background: var(--paper-card);
+    border-radius: 12px;
+    padding: 40px 44px 36px;
+    width: 340px;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .lock-glyph {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 52px;
+    color: var(--accent);
+    margin-bottom: 4px;
+    line-height: 1;
+  }
+  .lock-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 300;
+    color: var(--ink);
+    margin-bottom: 2px;
+    letter-spacing: 0.04em;
+  }
+  .lock-subtitle {
+    font-size: 11px;
+    color: var(--ink-faint);
+    margin-bottom: 28px;
+    letter-spacing: 0.06em;
+  }
+  .lock-input-wrap {
+    width: 100%;
+    position: relative;
+    margin-bottom: 10px;
+  }
+  .lock-input-wrap input {
+    width: 100%;
+    padding: 11px 40px 11px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: 'DM Mono', monospace;
+    font-size: 15px;
+    letter-spacing: 0.25em;
+    color: var(--ink);
+    background: var(--paper);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    text-align: center;
+  }
+  .lock-input-wrap input:focus {
+    border-color: var(--accent-light);
+    box-shadow: 0 0 0 3px var(--accent-faint);
+  }
+  .lock-input-wrap input.shake {
+    animation: shake 0.4s ease;
+    border-color: #c45a5a;
+  }
+  .lock-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: var(--ink-faint);
+    font-size: 15px;
+    user-select: none;
+  }
+  .lock-toggle:hover { color: var(--ink-muted); }
+  .lock-btn {
+    width: 100%;
+    padding: 11px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-bottom: 12px;
+  }
+  .lock-btn:hover { background: #7a3020; }
+  .lock-error {
+    font-size: 11px;
+    color: #c45a5a;
+    min-height: 16px;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  .lock-change-wrap {
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+    width: 100%;
+    text-align: center;
+  }
+  .lock-change-btn {
+    background: none;
+    border: none;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-faint);
+    cursor: pointer;
+    letter-spacing: 0.04em;
+  }
+  .lock-change-btn:hover { color: var(--ink-muted); text-decoration: underline; }
+  .change-pw-panel {
+    background: var(--paper-card);
+    border-radius: 12px;
+    padding: 28px 32px;
+    width: 340px;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .change-pw-panel.open { display: flex; }
+  .change-pw-panel h3 { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 400; margin-bottom: 4px; }
+  .change-pw-panel .cpw-field { display: flex; flex-direction: column; gap: 4px; }
+  .change-pw-panel .cpw-field label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-muted); }
+  .change-pw-panel .cpw-field input {
+    padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius);
+    font-family: 'DM Mono', monospace; font-size: 12px; outline: none; background: var(--paper);
+  }
+  .change-pw-panel .cpw-field input:focus { border-color: var(--accent-light); }
+  .pw-msg { font-size: 11px; min-height: 16px; }
+  .pw-msg.ok { color: var(--green); }
+  .pw-msg.err { color: #c45a5a; }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); }
+    60% { transform: translateX(-5px); }
+    80% { transform: translateX(5px); }
   }
 </style>
 </head>
 <body>
+
+<!-- ── LOCK SCREEN ── -->
+<div id="lockScreen">
+  <div class="lock-card" id="lockCard">
+    <div class="lock-glyph">針</div>
+    <div class="lock-title">Ficha Clínica MTC</div>
+    <div class="lock-subtitle">ACESSO RESTRITO</div>
+    <div class="lock-input-wrap">
+      <input type="password" id="lockInput" placeholder="••••••••" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter') tryUnlock()">
+      <span class="lock-toggle" onclick="toggleLockVis()" id="lockToggle">👁</span>
+    </div>
+    <div class="lock-error" id="lockError"></div>
+    <button class="lock-btn" onclick="tryUnlock()">Entrar</button>
+    <div class="lock-change-wrap">
+      <button class="lock-change-btn" onclick="showChangePanel()">Alterar password</button>
+    </div>
+  </div>
+
+  <div class="change-pw-panel" id="changePwPanel">
+    <h3>Alterar Password</h3>
+    <div class="cpw-field">
+      <label>Password actual</label>
+      <input type="password" id="cpwCurrent" placeholder="Password actual">
+    </div>
+    <div class="cpw-field">
+      <label>Nova password</label>
+      <input type="password" id="cpwNew" placeholder="Mínimo 4 caracteres">
+    </div>
+    <div class="cpw-field">
+      <label>Confirmar nova password</label>
+      <input type="password" id="cpwConfirm" placeholder="Repetir nova password">
+    </div>
+    <div class="pw-msg" id="pwMsg"></div>
+    <button class="lock-btn" style="margin-bottom:0" onclick="changePassword()">Guardar nova password</button>
+    <button class="lock-change-btn" style="margin-top:4px" onclick="hideChangePanel()">← Voltar</button>
+  </div>
+</div>
 
 <div class="shell">
   <!-- HEADER -->
@@ -610,6 +797,130 @@
 </div>
 
 <script>
+// ── AUTH ──
+const DEFAULT_PASSWORD = 'mtc2024';
+const PW_KEY = 'mtc_pw_hash';
+const SESSION_KEY = 'mtc_session';
+const INACTIVITY_MINUTES = 30;
+
+function hashStr(s) {
+  // Simple deterministic hash — not cryptographic but sufficient for local protection
+  let h = 0;
+  for (let i = 0; i < s.length; i++) { h = Math.imul(31, h) + s.charCodeAt(i) | 0; }
+  return String(h >>> 0);
+}
+
+function getStoredHash() {
+  return localStorage.getItem(PW_KEY) || hashStr(DEFAULT_PASSWORD);
+}
+
+function isSessionValid() {
+  const ts = sessionStorage.getItem(SESSION_KEY);
+  if (!ts) return false;
+  return (Date.now() - parseInt(ts)) < INACTIVITY_MINUTES * 60 * 1000;
+}
+
+function touchSession() {
+  sessionStorage.setItem(SESSION_KEY, String(Date.now()));
+}
+
+function unlock() {
+  touchSession();
+  document.getElementById('lockScreen').style.display = 'none';
+  resetInactivityTimer();
+  // Boot app if first unlock this page load
+  if (!window._appBooted) {
+    window._appBooted = true;
+    if (SCRIPT_URL) { setStatus('loading'); loadPatients(); }
+    else { setStatus('noconfig'); }
+  }
+}
+
+function tryUnlock() {
+  const val = document.getElementById('lockInput').value;
+  const errEl = document.getElementById('lockError');
+  if (hashStr(val) === getStoredHash()) {
+    errEl.textContent = '';
+    unlock();
+  } else {
+    errEl.textContent = 'Password incorrecta. Tenta novamente.';
+    const input = document.getElementById('lockInput');
+    input.classList.add('shake');
+    input.value = '';
+    setTimeout(() => input.classList.remove('shake'), 450);
+    input.focus();
+  }
+}
+
+function toggleLockVis() {
+  const inp = document.getElementById('lockInput');
+  const tog = document.getElementById('lockToggle');
+  if (inp.type === 'password') { inp.type = 'text'; tog.textContent = '🙈'; }
+  else { inp.type = 'password'; tog.textContent = '👁'; }
+}
+
+function showChangePanel() {
+  document.getElementById('lockCard').style.display = 'none';
+  document.getElementById('changePwPanel').classList.add('open');
+}
+function hideChangePanel() {
+  document.getElementById('lockCard').style.display = 'flex';
+  document.getElementById('changePwPanel').classList.remove('open');
+  document.getElementById('pwMsg').textContent = '';
+  ['cpwCurrent','cpwNew','cpwConfirm'].forEach(id => document.getElementById(id).value = '');
+}
+
+function changePassword() {
+  const cur = document.getElementById('cpwCurrent').value;
+  const nw  = document.getElementById('cpwNew').value;
+  const cf  = document.getElementById('cpwConfirm').value;
+  const msg = document.getElementById('pwMsg');
+
+  if (hashStr(cur) !== getStoredHash()) {
+    msg.textContent = 'Password actual incorrecta.'; msg.className = 'pw-msg err'; return;
+  }
+  if (nw.length < 4) {
+    msg.textContent = 'A nova password deve ter pelo menos 4 caracteres.'; msg.className = 'pw-msg err'; return;
+  }
+  if (nw !== cf) {
+    msg.textContent = 'As passwords não coincidem.'; msg.className = 'pw-msg err'; return;
+  }
+  localStorage.setItem(PW_KEY, hashStr(nw));
+  msg.textContent = '✓ Password alterada com sucesso!'; msg.className = 'pw-msg ok';
+  setTimeout(() => { hideChangePanel(); unlock(); }, 1200);
+}
+
+// Inactivity lock — bloqueia após 30 min sem interacção
+let inactivityTimer;
+function resetInactivityTimer() {
+  clearTimeout(inactivityTimer);
+  touchSession();
+  inactivityTimer = setTimeout(lockApp, INACTIVITY_MINUTES * 60 * 1000);
+}
+function lockApp() {
+  sessionStorage.removeItem(SESSION_KEY);
+  document.getElementById('lockInput').value = '';
+  document.getElementById('lockError').textContent = '';
+  document.getElementById('lockScreen').style.display = 'flex';
+  hideChangePanel();
+}
+// Reset timer on any user activity
+['mousemove','keydown','click','touchstart'].forEach(evt =>
+  document.addEventListener(evt, resetInactivityTimer, { passive: true })
+);
+
+// Add lock button to header (injected after DOM load)
+function injectLockBtn() {
+  const hdr = document.querySelector('.header');
+  if (!hdr) return;
+  const btn = document.createElement('button');
+  btn.className = 'btn-secondary';
+  btn.style.cssText = 'margin-left:8px;font-size:11px;';
+  btn.textContent = '🔒 Bloquear';
+  btn.onclick = lockApp;
+  hdr.appendChild(btn);
+}
+
 // ── STATE ──
 let SCRIPT_URL = localStorage.getItem('mtc_script_url') || '';
 let allPatients = [];
@@ -618,11 +929,15 @@ let currentTab = 'dados';
 
 // ── INIT ──
 window.onload = () => {
-  if (SCRIPT_URL) {
-    setStatus('loading');
-    loadPatients();
+  injectLockBtn();
+  if (isSessionValid()) {
+    window._appBooted = true;
+    unlock();
+    if (SCRIPT_URL) { setStatus('loading'); loadPatients(); }
+    else setStatus('noconfig');
   } else {
-    setStatus('noconfig');
+    document.getElementById('lockScreen').style.display = 'flex';
+    setTimeout(() => document.getElementById('lockInput').focus(), 100);
   }
 };
 
