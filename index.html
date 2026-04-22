@@ -1105,14 +1105,28 @@ function renderPatientForm(p) {
   renderTab(p);
 }
 
+function flushCurrentTab() {
+  // Reads only the fields currently in the DOM — fields from other tabs are untouched.
+  const g = id => { const el = document.getElementById(id); return el ? el.value : undefined; };
+  const allFields = [
+    'nome','dataNascimento','genero','nif','telemovel','email','morada','profissao','medicoFamilia',
+    'motivoConsulta','historiaDDoenca','antecedentes','cirurgias','medicacaoAtual','alergias','habitos',
+    'energia','sono','apetite','digestao','sede','urina','fezes','suores','temperatura','dor','emocoes',
+    'linguaCorpo','linguaRevestimento','linguaForma','linguaUmidade',
+    'pulsoDir1','pulsoDir2','pulsoDir3','pulsoEsq1','pulsoEsq2','pulsoEsq3','pulsoQualidade',
+    'diagnosticoMTC','principioTratamento','notas'
+  ];
+  allFields.forEach(f => {
+    const val = g('f_' + f);
+    if (val !== undefined) currentPatient[f] = val;
+  });
+}
+
 function switchTab(tab) {
+  flushCurrentTab(); // flush visible fields before destroying them
   currentTab = tab;
-  const p = getFormData();
-  // merge with currentPatient to preserve unsaved
-  const merged = { ...currentPatient, ...p };
-  currentPatient = merged;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.textContent.trim().includes(tabLabel(tab))));
-  renderTab(merged);
+  renderTab(currentPatient);
 }
 
 function tabLabel(t) {
@@ -1331,8 +1345,8 @@ function getFormData() {
 }
 
 async function savePatient() {
-  const formData = getFormData();
-  const data = { ...currentPatient, ...formData };
+  flushCurrentTab(); // merge whatever tab is currently visible into currentPatient
+  const data = { ...currentPatient };
   const result = await api({ action: 'savePatient', data });
   if (result.error) { toast(result.error, true); return; }
 
