@@ -1065,20 +1065,23 @@ function calcAge(dob) {
 
 function newPatient() {
   currentPatient = { id: null };
-  renderPatientForm({});
+  currentTab = 'dados';
+  renderPatientForm();
 }
 
 function openPatient(id) {
   const p = allPatients.find(x => x.id === id);
   if (!p) return;
-  currentPatient = p;
+  currentPatient = { ...p }; // local working copy — never mutate allPatients directly
   currentTab = 'dados';
-  renderPatientForm(p);
+  renderPatientForm();
   renderPatientList(allPatients);
 }
 
 // ── PATIENT FORM ──
-function renderPatientForm(p) {
+function renderPatientForm() {
+  // Always reads from currentPatient — single source of truth
+  const p = currentPatient;
   const isNew = !p.id;
   document.getElementById('mainArea').innerHTML = `
     <div class="patient-view">
@@ -1102,7 +1105,7 @@ function renderPatientForm(p) {
         <span class="save-msg" id="saveMsg">✓ Guardado</span>
       </div>
     </div>`;
-  renderTab(p);
+  renderTab();
 }
 
 function flushCurrentTab() {
@@ -1123,17 +1126,19 @@ function flushCurrentTab() {
 }
 
 function switchTab(tab) {
-  flushCurrentTab(); // flush visible fields before destroying them
+  flushCurrentTab(); // merge visible fields into currentPatient before destroying DOM
   currentTab = tab;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.textContent.trim().includes(tabLabel(tab))));
-  renderTab(currentPatient);
+  renderTab();
 }
 
 function tabLabel(t) {
   return { dados:'Dados', clinico:'Hist.', mtc:'Anamnese', sessoes:'Sessões' }[t];
 }
 
-function renderTab(p) {
+function renderTab() {
+  // Always reads from currentPatient
+  const p = currentPatient;
   const el = document.getElementById('tabContent');
   if (currentTab === 'dados') el.innerHTML = tabDados(p);
   else if (currentTab === 'clinico') el.innerHTML = tabClinico(p);
@@ -1346,7 +1351,7 @@ function getFormData() {
 
 async function savePatient() {
   flushCurrentTab(); // merge whatever tab is currently visible into currentPatient
-  const data = { ...currentPatient };
+  const data = { ...currentPatient }; // snapshot to send
   const result = await api({ action: 'savePatient', data });
   if (result.error) { toast(result.error, true); return; }
 
