@@ -811,7 +811,30 @@ function hashStr(s) {
 }
 
 function getStoredHash() {
+  // Use remote hash if already loaded, else local fallback
+  if (_remotePasswordHash) return _remotePasswordHash;
   return localStorage.getItem(PW_KEY) || hashStr(DEFAULT_PASSWORD);
+}
+
+async function loadRemotePassword() {
+  if (!SCRIPT_URL) return;
+  try {
+    const r = await api({ action: 'getConfig', key: 'passwordHash' });
+    if (r && r.value) {
+      _remotePasswordHash = r.value;
+      // Keep local in sync
+      localStorage.setItem(PW_KEY, r.value);
+    }
+  } catch { /* silently fallback to local */ }
+}
+
+async function saveRemotePassword(hash) {
+  _remotePasswordHash = hash;
+  localStorage.setItem(PW_KEY, hash);
+  if (!SCRIPT_URL) return;
+  try {
+    await api({ action: 'setConfig', key: 'passwordHash', value: hash });
+  } catch { /* saved locally at least */ }
 }
 
 function isSessionValid() {
@@ -836,9 +859,11 @@ function unlock() {
   }
 }
 
-function tryUnlock() {
+async function tryUnlock() {
   const val = document.getElementById('lockInput').value;
   const errEl = document.getElementById('lockError');
+  // Try to load remote password before checking (handles cross-device sync)
+  await loadRemotePassword();
   if (hashStr(val) === getStoredHash()) {
     errEl.textContent = '';
     unlock();
@@ -885,7 +910,7 @@ function changePassword() {
   if (nw !== cf) {
     msg.textContent = 'As passwords não coincidem.'; msg.className = 'pw-msg err'; return;
   }
-  localStorage.setItem(PW_KEY, hashStr(nw));
+  saveRemotePassword(hashStr(nw)).then(() => {});
   msg.textContent = '✓ Password alterada com sucesso!'; msg.className = 'pw-msg ok';
   setTimeout(() => { hideChangePanel(); unlock(); }, 1200);
 }
@@ -922,10 +947,12 @@ function injectLockBtn() {
 }
 
 // ── STATE ──
-let SCRIPT_URL = localStorage.getItem('mtc_script_url') || '';
+// URL do Apps Script embutido — não precisa de configuração por dispositivo
+let SCRIPT_URL = localStorage.getItem('mtc_script_url') || 'https://script.google.com/macros/s/AKfycbyW4adbBsZzJpItyI6S7KAqpdwExu2YgjvAixEsbpYihO9VsTx3zK5oR6iSmnjqYA/exec';
 let allPatients = [];
 let currentPatient = null;
 let currentTab = 'dados';
+let _remotePasswordHash = null; // cache da password lida do Sheets
 
 // ── INIT ──
 window.onload = () => {
@@ -937,6 +964,8 @@ window.onload = () => {
     else setStatus('noconfig');
   } else {
     document.getElementById('lockScreen').style.display = 'flex';
+    // Pre-load remote password hash so login works cross-device immediately
+    if (SCRIPT_URL) loadRemotePassword();
     setTimeout(() => document.getElementById('lockInput').focus(), 100);
   }
 };
@@ -984,6 +1013,8 @@ function saveUrl() {
   }
   SCRIPT_URL = url;
   localStorage.setItem('mtc_script_url', SCRIPT_URL);
+  // Also pre-load remote password after connecting
+  loadRemotePassword();
   toast('URL guardado');
   setStatus('loading');
   loadPatients();
