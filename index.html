@@ -804,37 +804,28 @@ const SESSION_KEY = 'mtc_session';
 const INACTIVITY_MINUTES = 30;
 
 function hashStr(s) {
-  // Simple deterministic hash — not cryptographic but sufficient for local protection
   let h = 0;
   for (let i = 0; i < s.length; i++) { h = Math.imul(31, h) + s.charCodeAt(i) | 0; }
   return String(h >>> 0);
 }
 
-function getStoredHash() {
-  // Use remote hash if already loaded, else local fallback
-  if (_remotePasswordHash) return _remotePasswordHash;
-  return localStorage.getItem(PW_KEY) || hashStr(DEFAULT_PASSWORD);
-}
-
 async function loadRemotePassword() {
-  if (!SCRIPT_URL) return;
+  // Returns the remote hash, or null if unavailable
+  if (!SCRIPT_URL) return null;
   try {
     const r = await api({ action: 'getConfig', key: 'passwordHash' });
-    if (r && r.value) {
-      _remotePasswordHash = r.value;
-      // Keep local in sync
-      localStorage.setItem(PW_KEY, r.value);
-    }
-  } catch { /* silently fallback to local */ }
+    if (r && r.value) return r.value;
+  } catch {}
+  return null;
 }
 
 async function saveRemotePassword(hash) {
-  _remotePasswordHash = hash;
+  // Save to both Sheets and localStorage
   localStorage.setItem(PW_KEY, hash);
   if (!SCRIPT_URL) return;
   try {
     await api({ action: 'setConfig', key: 'passwordHash', value: hash });
-  } catch { /* saved locally at least */ }
+  } catch {}
 }
 
 function isSessionValid() {
@@ -862,10 +853,25 @@ function unlock() {
 async function tryUnlock() {
   const val = document.getElementById('lockInput').value;
   const errEl = document.getElementById('lockError');
-  // Try to load remote password before checking (handles cross-device sync)
-  await loadRemotePassword();
-  if (hashStr(val) === getStoredHash()) {
+  const inputHash = hashStr(val);
+
+  // 1. Try remote password (source of truth — cross-device)
+  const remoteHash = await loadRemotePassword();
+
+  // 2. Fallback chain: remote → localStorage → default
+  const localHash = localStorage.getItem(PW_KEY);
+  const defaultHash = hashStr(DEFAULT_PASSWORD);
+
+  const validHashes = new Set(
+    [remoteHash, localHash, defaultHash].filter(Boolean)
+  );
+
+  if (validHashes.has(inputHash)) {
     errEl.textContent = '';
+    // If remote was empty or different from what user typed, save correct hash remotely now
+    if (remoteHash !== inputHash) {
+      await saveRemotePassword(inputHash);
+    }
     unlock();
   } else {
     errEl.textContent = 'Password incorrecta. Tenta novamente.';
@@ -895,7 +901,7 @@ function hideChangePanel() {
   ['cpwCurrent','cpwNew','cpwConfirm'].forEach(id => document.getElementById(id).value = '');
 }
 
-function changePassword() {
+async function changePassword() {
   const cur = document.getElementById('cpwCurrent').value;
   const nw  = document.getElementById('cpwNew').value;
   const cf  = document.getElementById('cpwConfirm').value;
@@ -910,9 +916,10 @@ function changePassword() {
   if (nw !== cf) {
     msg.textContent = 'As passwords não coincidem.'; msg.className = 'pw-msg err'; return;
   }
-  saveRemotePassword(hashStr(nw)).then(() => {});
-  msg.textContent = '✓ Password alterada com sucesso!'; msg.className = 'pw-msg ok';
-  setTimeout(() => { hideChangePanel(); unlock(); }, 1200);
+  msg.textContent = 'A guardar…'; msg.className = 'pw-msg ok';
+  await saveRemotePassword(hashStr(nw));
+  msg.textContent = '✓ Password alterada e sincronizada!'; msg.className = 'pw-msg ok';
+  setTimeout(() => { hideChangePanel(); unlock(); }, 1400);
 }
 
 // Inactivity lock — bloqueia após 30 min sem interacção
@@ -952,7 +959,7 @@ let SCRIPT_URL = localStorage.getItem('mtc_script_url') || 'https://script.googl
 let allPatients = [];
 let currentPatient = null;
 let currentTab = 'dados';
-let _remotePasswordHash = null; // cache da password lida do Sheets
+
 
 // ── INIT ──
 window.onload = () => {
@@ -964,8 +971,6 @@ window.onload = () => {
     else setStatus('noconfig');
   } else {
     document.getElementById('lockScreen').style.display = 'flex';
-    // Pre-load remote password hash so login works cross-device immediately
-    if (SCRIPT_URL) loadRemotePassword();
     setTimeout(() => document.getElementById('lockInput').focus(), 100);
   }
 };
